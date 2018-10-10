@@ -13,8 +13,12 @@ WAN interfaces should be PPPoE or another stateful kind of interface.
 RouterOS version > 6.37
 
 ### Installing
-Just save as script and run it from scheduler.
+You **can't** just copy and paste that script. You shall edit it for your specific case. Things to change outside *SETTINGS* area:
+- Change pppoe to your interface type (works only with stateful interfaces)
+- Change actions that should be taken when interface changes it's status.
+
+Save as script and run it from scheduler.
 Different script with different name for each ISP.
 
-#### ***
+#### \*\*\*
 Feel free to ask questions or correct my spelling.
