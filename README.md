@@ -9,6 +9,7 @@ Check ISP connection with multiple ping targets and advanced logic in multiple I
 
 ### Prerequisites
 WAN interfaces should be PPPoE or another stateful kind of interface.
+
 RouterOS version > 6.37
 
 ### Installing
