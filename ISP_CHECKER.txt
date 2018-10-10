@@ -1,0 +1,114 @@
+# 2018-09-11_12-56-55
+# ISP Checker Script
+# https://github.com/vikilpet/mikrotik_isp_checker
+# https://vikilpet.wordpress.com
+
+# ++++++++++++++++++++++++++++++ SETTINGS ++++++++++++++++++++++++++++++
+#	Name of this script in /system scripts
+	local ScriptName "CHECKER_ISP1"
+#	Don't forget to replace the interface type in ":interface pppoe-client...":
+	local ISPInterface "ISP1"
+#	Global variable to store ISP status:
+	local CurVariable ("ISP1Status")
+	global ISP1Status
+#	Comment of backup mangle rule (prerouting and output):
+	local BackupComment "PCC_MARK_CONNECTION_BACKUP_ISP1"
+#	Connection-mark
+	local ConnectionMark "CON_ISP1"
+	local HostsToPing ("mail.yandex.ru", "google.ru", "e.mail.ru",  "208.67.222.123", "77.88.8.3")
+#	Task interval in the scheduler. It should be bigger than HostsToPing * PingCount (default ping interval 1s):
+	local ScheduleInterval 30s
+#	How many times to ping every host when current state is "UP":
+	local PingCount 3
+#	How many times to ping every host when current state is "DOWN":
+	local PingCountWhenDown 30
+#	Percent for successful ping (for all hosts):
+	local PingSuccess 75
+#------------------------------------------------------------ SETTINGS ------------------------------------------------------------
+
+local CurStatus ""
+local Reason ""
+local Host ""
+local HostCount 0
+local PingResult 0
+local PingResultTemp
+local FastReconnectFlag false
+
+# Do not run this script twice:
+if ([/system script job find script=$ScriptName]~";"=false) do={
+
+	:log info "+++ $ISPInterface CHECKER STARTED +++";
+	
+#	For the first run at system startup:
+	:if ([/system script environment get [find name=$CurVariable] value]="") do={
+		/system script environment set value="UNKNOWN" [find name=$CurVariable]
+	}
+	
+#	Count the number of hosts:
+	:foreach Host in=$HostsToPing do={set HostCount ($HostCount + 1)};
+	
+#	If current status is DOWN then use another value for PingCount:
+	:if ([/system script environment get [find name=$CurVariable] value]="DOWN") do={
+		:set PingCount $PingCountWhenDown;
+	}
+	
+#	Calculate successful ping count:
+	:set PingSuccess ($HostCount * $PingCount * $PingSuccess / 100);
+	
+	/interface pppoe-client monitor $ISPInterface once do={
+		:if ($status="connected") do={
+			:set FastReconnectFlag ($uptime<$ScheduleInterval);
+			:foreach Host in $HostsToPing do={
+				:set PingResultTemp ([:ping address=$Host count=$PingCount interface=$ISPInterface]);
+				:set PingResult ($PingResult + $PingResultTemp);
+				:if ($PingResultTemp=0 and [/system script environment get [find name=$CurVariable] value]="UP") do={
+					:log info "HOST $Host IS UNREACHABLE THROUGH $ISPInterface";
+				}
+			}
+			:if ($PingResult>=$PingSuccess) do={
+				:set CurStatus "UP";
+				:set Reason "PING OK ($PingResult >= $PingSuccess)";
+			} else={
+				:set CurStatus "DOWN";
+				:set Reason "PING FAILED ($PingResult < $PingSuccess)";
+			}
+		} else={
+			:set CurStatus "DOWN";
+			:set Reason ("INTERFACE IS NOT CONNECTED"." (".$status.")");
+		}
+	}
+	
+#	Check if status has changed:
+	:if ([/system script environment get [find name=$CurVariable] value]!=$CurStatus) do={
+		/system script environment set value=$CurStatus [find name=$CurVariable]
+		:if ($CurStatus="UP") do={
+			:log info "REMOVE $ISPInterface SIP AND L2TP CONNECTIONS AND CHANGE ROUTING...";
+			/ip firewall mangle set disabled=yes [find comment=$BackupComment]
+			:delay 1s;
+			/ip firewall connection remove [find connection-type=sip]
+			/ip firewall connection remove [find dst-address~":1701"]
+			:log info "... DONE!";
+		} else={
+			:log info "REMOVE $ISPInterface CONNECTIONS AND CHANGE ROUTING...";
+			/ip firewall mangle set disabled=no [find comment=$BackupComment]
+			:delay 1s;
+			/ip firewall connection remove [find connection-mark=$ConnectionMark]
+			:log info "... DONE!";
+		}
+		:log warning "$[/system identity get name]: $ISPInterface IS $CurStatus, REASON: $Reason";
+	} else={
+		:if $FastReconnectFlag do={
+			:if ($CurStatus="UP") do={
+				:log info "REMOVE $ISPInterface CONNECTIONS...";
+				/ip firewall connection remove [find connection-mark=$ConnectionMark]
+				:log info "... DONE!";
+				:log warning "$[/system identity get name]: $ISPInterface WAS RECONNECTED QUICKLY";
+			}
+		}
+	}
+	
+	:log info "--- $ISPInterface CHECKER FINISHED ---";
+	
+} else={
+	:log info "DO NOT RUN TWICE $ScriptName";
+}
