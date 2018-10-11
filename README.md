@@ -1,4 +1,4 @@
-# Mikrotik ISP checker script
+# Mikrotik ISP Checker Script
 Check ISP connection with multiple ping targets and advanced logic in multiple ISP setup.
 
 ### Features
@@ -8,17 +8,25 @@ Check ISP connection with multiple ping targets and advanced logic in multiple I
 - Protection from launching another instance of script
 
 ### Prerequisites
-WAN interfaces should be PPPoE or another stateful kind of interface.
+ISP interfaces should be pppoe-client or another stateful kind of interface.
 
 RouterOS version > 6.37
 
+### Explanation
+We should not trust only one host so we ping many.
+
+We should remove SIP connections because of limitations of UDP + NAT schema.See this [great post](https://forum.mikrotik.com/viewtopic.php?t=129048#p641539) on official forum.
+
+I use L2TP tunnels so I should remove their connections too. Sometimes some of them stopped working after problem with ISP interface.
+
+Quick reconnection may happen between script launches. We can detect it with *uptime* property of pppoe interface and take respective actions.
+
 ### Installing
 You **can't** just copy and paste that script. You shall edit it for your specific case. Things to change outside *SETTINGS* area:
-- Change pppoe to your interface type (works only with stateful interfaces)
-- Change actions that should be taken when interface changes it's status.
+- Change pppoe-client to your interface type (works only with stateful interfaces)
+- Change actions that should be taken when interface changes status. My main action is changing of mangle rules state. You probably should just disable corresponding route.
 
-Save as script and run it from scheduler.
-Different script with different name for each ISP.
+One script for one ISP. If you have 3 ISP you should make 3 scripts.
 
 #### \*\*\*
-Feel free to ask questions or correct my spelling.
+Feel free to ask questions or correct my spelling mistakes.
