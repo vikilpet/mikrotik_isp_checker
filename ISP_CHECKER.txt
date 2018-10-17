@@ -15,7 +15,7 @@
 	local BackupComment "PCC_MARK_CONNECTION_BACKUP_ISP1"
 #	Connection-mark
 	local ConnectionMark "CON_ISP1"
-	local HostsToPing ("yandex.ru", "google.ru", "mail.ru",  "8.8.8.8")
+	local HostsToPing ("mail.yandex.ru", "google.ru", "e.mail.ru",  "208.67.222.123", "77.88.8.3", "sip.zadarma.com")
 #	Task interval in the scheduler. It should be bigger than HostsToPing * PingCount (default ping interval 1s):
 	local ScheduleInterval 30s
 #	How many times to ping every host when current state is "UP":
@@ -92,7 +92,8 @@ if ([/system script job find script=$ScriptName]~";"=false) do={
 			:log info "REMOVE $ISPInterface CONNECTIONS AND CHANGE ROUTING...";
 			/ip firewall mangle set disabled=no [find comment=$BackupComment]
 			:delay 1s;
-			/ip firewall connection remove [find connection-mark=$ConnectionMark]
+			/ip firewall connection remove [find connection-type=sip]
+			/ip firewall connection remove [find dst-address~":1701"]
 			:log info "... DONE!";
 		}
 		:log warning "$[/system identity get name]: $ISPInterface IS $CurStatus, REASON: $Reason";
