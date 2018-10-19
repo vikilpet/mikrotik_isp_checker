@@ -1,4 +1,4 @@
-# 2018-10-17_13-10-08
+# 2018-10-19
 # ISP Checker Script
 # https://github.com/vikilpet/mikrotik_isp_checker
 # https://vikilpet.wordpress.com
@@ -82,18 +82,18 @@ if ([/system script job find script=$ScriptName]~";"=false) do={
 	:if ([/system script environment get [find name=$CurVariable] value]!=$CurStatus) do={
 		/system script environment set value=$CurStatus [find name=$CurVariable]
 		:if ($CurStatus="UP") do={
-			:log info "REMOVE $ISPInterface SIP AND L2TP CONNECTIONS AND CHANGE ROUTING...";
+			:log info "REMOVE $ISPInterface CONNECTIONS AND CHANGE ROUTING...";
 			/ip firewall mangle set disabled=yes [find comment=$BackupComment]
 			:delay 1s;
-			/ip firewall connection remove [find connection-type=sip]
-			/ip firewall connection remove [find dst-address~":1701"]
+			/ip firewall connection remove [find connection-type=sip and connection-mark=$ConnectionMark]
+			/ip firewall connection remove [find dst-address~":1701" and connection-mark=$ConnectionMark]
 			:log info "... DONE!";
 		} else={
 			:log info "REMOVE $ISPInterface CONNECTIONS AND CHANGE ROUTING...";
 			/ip firewall mangle set disabled=no [find comment=$BackupComment]
 			:delay 1s;
-			/ip firewall connection remove [find connection-type=sip]
-			/ip firewall connection remove [find dst-address~":1701"]
+			/ip firewall connection remove [find connection-type=sip and connection-mark=$ConnectionMark]
+			/ip firewall connection remove [find dst-address~":1701" and connection-mark=$ConnectionMark]
 			:log info "... DONE!";
 		}
 		:log warning "$[/system identity get name]: $ISPInterface IS $CurStatus, REASON: $Reason";
@@ -101,7 +101,8 @@ if ([/system script job find script=$ScriptName]~";"=false) do={
 		:if $FastReconnectFlag do={
 			:if ($CurStatus="UP") do={
 				:log info "REMOVE $ISPInterface CONNECTIONS...";
-				/ip firewall connection remove [find connection-mark=$ConnectionMark]
+				/ip firewall connection remove [find connection-type=sip and connection-mark=$ConnectionMark]
+				/ip firewall connection remove [find dst-address~":1701" and connection-mark=$ConnectionMark]
 				:log info "... DONE!";
 				:log warning "$[/system identity get name]: $ISPInterface WAS RECONNECTED QUICKLY";
 			}
