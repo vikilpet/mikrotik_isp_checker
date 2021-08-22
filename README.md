@@ -1,3 +1,7 @@
+**This script is obsolete. The new script is better than this one in every way**:
+
+https://github.com/vikilpet/mikrotik-interface-check
+
 # Mikrotik ISP Checker Script
 Check ISP connection with multiple ping targets and advanced logic in multiple ISP setup.
 
